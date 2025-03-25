@@ -1,0 +1,9 @@
+{
+    "version": "0.9.9",
+    "type": "5",
+    "order": "5",
+    "author": "Oleg Loukianov",
+    "author_uri": "http:\/\/www.iut-fbleau.fr\/projet\/etc\/",
+    "description": "Search in any table(s)",
+    "flags": 3
+}

@@ -1,0 +1,174 @@
+<h3>Description</h3>
+
+	<p>This plugin displays a search form similarly to <code>&lt;txp:search_input /&gt;</code>. If Javascript is enabled, a results list will fade in and resize in real time below the search box with a nice animation effect as the user types his query. When the search box is empty, the results list shrinks and fades out.</p>
+
+	<p>The search is advanced, i.e. "jaguar speed -car" will display the results containing the strings "jaguar" and "speed", but not "car". The syntax is customizable by modifying <code>Search settings</code> JSON encoded preference. Moreover, you can instruct the plugin to do faceted searches and query any fields in your txp database.</p>
+
+	<p>When the user hits the Enter key he gets redirected to a traditional search results page, so the plugin also degrades nicely in non-Javascript browsers.</p>
+
+	<p>Nearly everything (input form, output form, animation, search query) is customizable. Moreover, you can use <code>etc_search</code> to query your txp database without user interaction, extending the capabilities of <code>article_custom</code> and other list tags..</p>
+
+	<h3>Requirements</h3>
+
+<p>The plugin is composed of two files: <code>etc_search.txt</code> and <code>livesearch.jquery.js</code>. The first one is compressed <code>php</code> file to be installed as usual in <code>Plugins</code> tab. On install it will create a <code>etc_search</code> table and two preferences that will be removed on uninstall. It will also create an article form (that you can modify) named <code>etc_search_results</code> that will be used as default live search output.</p>
+
+	<h4>Javascript</h4>
+
+	<p>jQuery <strong>1.8</strong> or more recent is required.</p>
+
+	<p>You can use the <code>jquery.js</code> javascript file which is bundled with Textpattern and you need to upload the provided <code>livesearch.jquery.js</code> file to your web server (for example in a folder called &#8220;/js/&#8221;) and include both of these files in the header of the web pages where you want to use the plugin:</p>
+
+<pre><code>&lt;script type=&quot;text/javascript&quot; src=&quot;textpattern/jquery.js&quot;&gt;&lt;/script&gt;
+&lt;script type=&quot;text/javascript&quot; src=&quot;js/livesearch.jquery.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+
+	<h3>Syntax</h3>
+
+<h4>Input form/live search</h4>
+<pre><code>&lt;txp:etc_search /&gt;
+</code></pre>
+<p>or as container:</p>
+<pre><code>&lt;txp:etc_search&gt;
+  &lt;input name="a" /&gt;
+  &lt;input name="b" /&gt;
+  ...
+&lt;/txp:etc_search&gt;
+</code></pre>
+
+<h4>Output results</h4>
+<pre><code>&lt;txp:etc_search_results /&gt;
+</code></pre>
+<p>or as container:</p>
+<pre><code>&lt;txp:etc_search_results&gt;
+  output pattern
+&lt;txp:else /&gt;
+  &lt;txp:text item="no_search_matches" /&gt;
+&lt;/txp:etc_search_results&gt;
+</code></pre>
+
+	<h3>Attributes of <code>etc_search</code> tag</h3>
+
+	<h4>Required</h4>
+
+	<p>none.</p>
+
+	<h4>Optional</h4>
+
+	<ul>
+		<li><strong>id</strong>: Comma-separated list of query identifiers (see below), default is <code>0</code> (default search).</li>
+		<li><strong>live</strong>: Milliseconds of user inactivity before live search starts, <code>600</code> by default. Set it to <code>0</code> to disable the live search, or to <code>-600</code> to make the results persist on the screen even after loosing the focus.</li>
+		<li><strong>minlength</strong>: Minimal length of user input before live search starts, <code>1</code> by default.</li>
+		<li><strong>match</strong>: Search mode, set it to <code>exact</code> if necessary.</li>
+		<li><strong>format</strong>: Allows to glue multiple URL <code>{variables}</code> (generally produced by <code>&lt;txp:etc_search /&gt;</code> used as container) into one search string. For example, <code>format="{q} @{c}"</code> will pass the string <code>?c=tips&q=pag&...</code> as "pag @tips" search query to <code>etc_search</code>. Default is <code>{q}</code>, the value of txp search string parameter.</li>
+		<li><strong>action</strong>: URL of the page to redirect the user to when he hits the Enter key, in order to display the standard search results page. Default is the home page.</li>
+		<li><strong>html_id</strong>: <span class="caps">HTML</span> <code>id</code> attribute that will be applied to the search form. Default is <code>live_search_[some_random_id]</code>.</li>
+		<li><strong>class</strong>: <span class="caps">HTML</span> <code>class</code> attribute of the search form, <code>ls_search</code> by default.</li>
+		<li><strong>target</strong>: jQuery selector, set it if you want to display live search results elsewhere.</li>
+		<li><strong>form</strong>: Optional Textpattern form for live search results output.</li>
+		<li><strong>label</strong>: Displays a label above the search box with the specified text. Default is &#8220;search&#8221; string localized in the language of your Textpattern installation.</li>
+		<li><strong>size</strong>: Size of the search box (number of characters).</li>
+		<li><strong>placeholder</strong>: Invitation text that will de displayed in the box. This text disappears when user has typed something into it. Default is empty.</li>
+		<li><strong>limit</strong>: Maximum number of results in the live results list. Default is <code>0</code> (no limit).</li>
+		<li><strong>wraptag</strong>: <span class="caps">HTML</span> tag to wrap the search results with, inside the form. Default is empty.</li>
+		<li><strong>break</strong>: <span class="caps">HTML</span> tag to be used for line breaks in the content inside the live results list, without brackets. Default is <code>br</code>.</li>
+	</ul>
+
+<h3>Admin-side settings</h3>
+
+<p>Go to <code>Extensions/etc_search</code> to change them.</p>
+
+<h4>Search settings</h4>
+<ul>
+<li><strong>Logical operations</strong>: JSON-encoded object containing MySQL operators to be used in search queries, e.g. <code>{"NOT":"-","AND":"/\s+/", "OR":","}</code>. The priority goes from the left to the right.</li>
+</ul>
+
+<h4>Search forms</h4>
+<ul>
+<li><strong>context</strong>: One of <code>article | file | image | link | category | section</code>, representing the table to search in, or <code>custom</code>. If not custom, you can use (some of) context tags in forms, see below.</li>
+		<li><strong>query</strong>: A string patterns representing a valid MySQL SELECT query, with specially crafted WHERE clause. It is of the form <code>SELECT ... WHERE {[?param::]match1;match2;...} AND/OR other_criteria ...</code>. The <code>{match}</code> token will be replaced by the plugin with appropriate string. A query pattern can be reduced to <code>{match1;match2;...} ...</code> if some non-custom context is set.<br />
+Here <code>param</code> is a url variable to be used in the item. If omitted, the default search parameter <code>q</code> will be used.<br />
+Each <code>match</code> item is a string <code>fields::pattern::condition</code>, where
+<ul>
+<li><code>fields</code> is a comma-separated list of db fields;</li>
+<li><code>pattern</code> is a regexp to match search query against, <code>/^.+$/s</code> (any query) by default;</li>
+<li><code>condition</code> is a MySQL WHERE clause (its default value is <code>{*} LIKE %search_term%</code>) to filter <code>fields</code> with. Here,  the <code>{*}</code> token will be replaced by <code>fields</code> names, and <code>$n</code> tokens will be taken from search queries matching <code>pattern</code>.</li>
+</ul>
+		<li><strong>form</strong>: Two output forms to use for displaying the results, in live and standard mode. If empty, will be assigned the value of <code>etc_search_results, search_results</code>.</li>
+<li>Finally, <strong>content</strong> consists of two output patterns where all occurrences of <code>{field}</code> will be replaced by the corresponding (escaped) field value. The first pattern will be used for the live search, the second one for the standard search.</li></ul>
+</li>
+</ul>
+
+	<h3>Examples</h3>
+<p>By default, <code>etc_search</code> acts like the built-in Textpattern search, querying articles <code>Title</code> and <code>Body</code>. If you want to make searchable also <code>Keywords</code> and <code>Excerpt</code>, create an article query <code>{Title,Body,Keywords,Excerpt}</code> (say, number 1), and call</p>
+<pre><code>&lt;txp:etc_search id="1" /&gt;</code></pre>
+
+<p>Suppose now that you wish to extend the default Textpattern search with faceted search for some text in images <code>caption</code> attribute, and display the titles of the articles which are associated (via Article image) with the matching images. To indicate that you are searching in captions, you decide to prefix terms by <code>cap:</code>. Then you can create the following article context query (say, number 2) and forms:</p>
+
+<pre><code>query: SELECT txp.*,img.caption FROM textpattern txp JOIN txp_image img ON FIND_IN_SET(img.id,txp.Image) WHERE {img.caption::/^cap:(.+)$/::{*} LIKE '%$1%'}
+live form: &lt;a href='&lt;txp:permlink /&gt;' title='{caption}'&gt;&lt;txp:title /&gt;&lt;/a&gt;
+static form: &lt;h3&gt;&lt;txp:permlink&gt;&lt;txp:title /&gt;&lt;/txp:permlink&gt;&lt;/h3&gt;&lt;txp:excerpt /&gt;
+</code></pre>
+ <p>and use <code>&lt;txp:etc_search id="0,2" /&gt;</code>.</p>
+
+<h3>The <code>etc_search_results</code> tag</h3>
+
+<p>You can replace the default (non-live) TXP search with <code>&lt;txp:etc_search_results /&gt;</code> by placing this tag instead of <code>&lt;txp:article /&gt;</code> in <code>if_search</code> section of your pages. The tag currently accepts the standard <code>form</code>, <code>wraptag</code>, <code>break</code>, <code>limit</code>, plus <code>no_match</code> attributes. If <code>form</code> or <code>content</code> are set, they will be common to all search queries, overwriting their own forms.</p>
+
+<p>The <code>id</code> attribute allows to restrict search to a list of comma-separated search form ids. If this list is preceded by <code>-</code>, the corresponding forms will be excluded. You can place two or more mutually exclusive <code>&lt;txp:etc_search_results /&gt;</code> tags on the page:</p>
+<pre><code>&lt;txp:etc_search_results id="1,2" form="form1" /&gt;
+&lt;txp:etc_search_results id="3" form="form2" /&gt;
+</code></pre>
+
+<p>The <code>query</code> attribute allows to pass a search string directly to <code>&lt;txp:etc_search_results /&gt;</code>. For example, <code>query="red blue"</code> will be treated as <code>?q=red+blue</code> and output (with the default search) all the articles containing both "red" and "blue". This allows to use <code>&lt;txp:etc_search_results /&gt;</code> as <code>&lt;txp:article_custom /&gt;</code> with very customizable <code>where</code> attribute.</p>
+
+<h3>The <code>etc_search_query</code> tag</h3><!-- todo -->
+
+<p>This one allows to transform search strings in SQL clauses, e.g. <code>(jaguar, mustang) car</code> into <code>(Keywords LIKE '%jaguar%' OR Keywords LIKE '%mustang%') AND Keywords LIKE '%car%'</code>. It accepts the following attributes:</p>
+<ul>
+<li><code>query="(jaguar, mustang) car"</code>;</li>
+<li><code>split='{"AND":"/\s+/", "OR":","}'</code>;</li>
+<li><code>match="/\w+/::Keywords LIKE '%$0%'"</code>.</li>
+</ul>
+
+<h3>The <code>etc_search_result_excerpt</code> tag</h3>
+
+<p>You can also replace <code>&lt;txp:search_result_excerpt /&gt;</code> with <code>&lt;txp:etc_search_result_excerpt /&gt;</code> where appropriate. It accepts some additional attributes:</p>
+<ul>
+<li><code>type="article"</code>;</li>
+<li><code>field="body"</code>;</li>
+<li><code>size="50"</code>: the maximum number of surrounding characters;</li>
+<li><code>showalways="0"</code>: show an excerpt even if there is no match.</li>
+</ul>
+
+
+<h3>The <code>etc_search_result_count</code> tag</h3>
+<p>Accepts only <code>text</code> attribute. The tokens <code>{from}, {to}, {total}, {page}, {pages}</code> therein will be replaced by corresponding values, to display a string like <code>Results 6 to 10 of 27</code>.</p>
+
+	<h3><span class="caps">CSS</span> Styling</h3>
+
+	<p>The live search consists of a form with the <code>id</code> attribute value set by the &#8220;html_id&#8221; parameter. This form contains two zones. You can style any element by referencing the id attribute of the form and the <span class="caps">CSS</span> class of the element (or its tag) in your <span class="caps">CSS</span>.</p>
+
+	<h4>The search zone</h4>
+
+	<p>The first zone is a block with the applied class &#8220;ls_search&#8221; which contains: the optional label (followed by a line break if defined) and the text input box. The tag of this block is defined by the &#8220;wraptag&#8221; parameter (default is <code>div</code>).</p>
+
+	<p>The default search box is an input tag. If you want, you can style it using a <span class="caps">CSS</span> rule like this one:</p>
+
+<pre><code>#live_search input {
+    font-size: 10px;
+    color: #000;
+}
+</code></pre>
+
+	<h4>The results zone</h4>
+
+	<p>The results zone is a <code>div</code> block with the class &#8220;ls_search&#8221;, containing the results list. You can choose to position this block absolutely, or even replace it with any block, setting <code>target</code> attribute.</p>
+
+	<p>If you are not happy with the default animation, unbind <code>update.html_id</code> event of the <code>target</code> and replace them with your own jQuery animations. You can also set <code>start</code> and <code>stop</code> events, fired at the beginning and the end of live AJAX requests.</p>
+
+	<p>The content of the results block will be either:</p>
+
+	<ol>
+		<li><em>At least one result is found:</em> A list with wrap and break tags according to your &#8220;wraptag&#8221; and &#8220;break&#8221; parameters (see above).</li>
+		<li><em>No results found:</em> The localized &#8220;no_search_matches&#8221; message.</li>
+	</ol>

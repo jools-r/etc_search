@@ -300,6 +300,11 @@ function etc_search_get_results($params, $live=true)
 			$query = $matches[1]; $order = $matches[2];
 		} else $order = '';
 
+		// If $query includes an own 'Status' query, use that in place of the default
+		if(preg_match('/^(.+)\b(Status[\s!=<>].+)$/Ui', $query, $matches)) {
+			$status = '';
+		} else $status = 'Status >= 4 AND';
+
 		$etc_search_match = true;
 		$etc_search_match_query = false;
 		$query = preg_replace_callback('/\{((?:[^{}]|(?0))+)\}/U', 'etc_search_gps', $oldquery = $query);
@@ -311,8 +316,8 @@ function etc_search_get_results($params, $live=true)
 		if(!($custom = preg_match('/^SELECT\b/i', $query))) switch($type) {//default search
 			case 'image' : case 'file' : case 'link' : case 'category' : case 'section' :
 			$table = safe_pfx('txp_'.$type);
-			$count = 'SELECT COUNT(*) FROM '.$table.' WHERE '.($type == 'file' ? 'status >= 4 AND ' : '').$query;
-			$query = 'SELECT * FROM '.$table.' WHERE '.($type == 'file' ? 'status >= 4 AND ' : '').$query;
+			$count = 'SELECT COUNT(*) FROM '.$table.' WHERE '.($type == 'file' ? $status.' ' : '').$query;
+			$query = 'SELECT * FROM '.$table.' WHERE '.($type == 'file' ? $status.' ' : '').$query;
 			break;
 
 			default :
@@ -324,8 +329,8 @@ function etc_search_get_results($params, $live=true)
 			$table = safe_pfx('textpattern');
 			$now_posted = is_callable('now') ? now('posted') : 'NOW()';
 			$now_expires = is_callable('now') ? now('expires') : 'NOW()';
-			$count = "SELECT COUNT(*) FROM $table WHERE Status >= 4 AND Posted <= $now_posted AND (Expires IS NULL OR Expires>=$now_expires) $s_filter AND $query";
-			$query = "SELECT *".($order ? '' : ", MATCH ($safe_search_fields) AGAINST ('$q') AS score")." FROM $table WHERE Status >= 4 AND Posted <= $now_posted AND (Expires IS NULL OR Expires>=$now_expires) $s_filter AND $query";
+			$count = "SELECT COUNT(*) FROM $table WHERE $status Posted <= $now_posted AND (Expires IS NULL OR Expires>=$now_expires) $s_filter AND $query";
+			$query = "SELECT *".($order ? '' : ", MATCH ($safe_search_fields) AGAINST ('$q') AS score")." FROM $table WHERE $status Posted <= $now_posted AND (Expires IS NULL OR Expires>=$now_expires) $s_filter AND $query";
 			if(!$order) $order = ' ORDER BY score DESC';
 		}
 

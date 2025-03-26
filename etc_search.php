@@ -42,20 +42,20 @@ function etc_search_install($event='', $step='')
 		if(!safe_count('txp_form', "name = 'etc_search_results' AND type = 'article'"))
 			safe_insert("txp_form", "name = 'etc_search_results', type = 'article', Form = '<txp:permlink><txp:title /></txp:permlink>'");
 
-		$qc="CREATE TABLE IF NOT EXISTS ".safe_pfx('etc_search')." (";
-		$qc.= <<<EOF
-			`id` int(4) NOT NULL AUTO_INCREMENT,
-			`query` varchar(255) NOT NULL,
-			`form1` varchar(64) NOT NULL,
-			`form2` varchar(64) NOT NULL,
-			`thing1` text NOT NULL,
-			`thing2` text NOT NULL,
-			`type` enum('article','image','file','link','category','section') NOT NULL,
-			PRIMARY KEY (`id`)
-			) ENGINE=MyISAM CHARACTER SET=utf8 ;
-EOF;
-		safe_query($qc);
-		safe_alter('etc_search', "MODIFY `type` enum('article','image','file','link','category','section') NOT NULL");
+		safe_create('etc_search', "
+			id		INT(4)			NOT NULL AUTO_INCREMENT,
+			query	VARCHAR(255)	NOT NULL,
+			form1	VARCHAR(64)		NOT NULL,
+			form2	VARCHAR(64)		NOT NULL,
+			thing1	TEXT			NOT NULL,
+			thing2	TEXT			NOT NULL,
+			type	ENUM('article','image','file','link','category','section','custom') NOT NULL,
+			PRIMARY KEY (id)
+		");
+
+		safe_alter('etc_search', "MODIFY `type` enum('article','image','file','link','category','section','custom') NOT NULL");
+		safe_update('etc_search', "type = 'custom'", "type = ''");
+
 		return;
 	}
 }
@@ -119,7 +119,7 @@ function etc_search_form($row) {
 	echo '<h3 class="lever txp-summary"><a href="#etc-form-'.$row['id'].'">', ($row['id'] ? 'Search form '.$row['id'] : 'New search form'), '</a></h3>', n;
 	echo '<form id="etc-form-'.$row['id'].'" class="etc-search-form" method="post" action="?event=etc_search#etc-form-'.$row['id'].'"', ($row['id'] ? ' data-id="'.$row['id'].'"' : ''), '>', n;
 	echo '<p><label>context</label><br />', /*implode('&nbsp;&nbsp; ', $context)*/
-	radioSet(array('article'=>gTxt('article_context'), 'image'=>gTxt('image_context'), 'file'=>gTxt('file_context'), 'link'=>gTxt('link_context'), 'category'=>gTxt('category'), 'section'=>gTxt('section'), ''=>'custom'), 'type', $row['type'], '', 'etc-'.$row['id']), '</p>', n;
+	radioSet(array('article'=>gTxt('article_context'), 'image'=>gTxt('image_context'), 'file'=>gTxt('file_context'), 'link'=>gTxt('link_context'), 'category'=>gTxt('category'), 'section'=>gTxt('section'), 'custom'=>'custom'), 'type', $row['type'], '', 'etc-'.$row['id']), '</p>', n;
 	echo '<p><label>query</label><br /><input type="text" name="query" value="', $row['query'], '" placeholder="{', $search_fields, '}" /></p>', n;
 	echo '<p><label>logical operators (JSON-encoded)</label><br /><input type="text" name="etc_ops_',$row['id'],'" value="', $row['id'] ? doSpecial(get_pref('etc_search_ops_'.$row['id'])) : '', '" placeholder="',doSpecial(get_pref('etc_search_ops')),'" /></p>', n;
 	echo '<table class="etc-two-column"><tr>', n;

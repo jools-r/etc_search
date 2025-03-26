@@ -305,6 +305,22 @@ function etc_search_get_results($params, $live=true)
 			$status = '';
 		} else $status = 'Status >= 4 AND';
 
+		// Match all instances of Section = 'value'
+		$query_sections = [];
+		if (preg_match_all("/Section\s*=\s*'([^']+)'/", $query, $matches)) {
+			$query_sections = array_merge($query_sections, $matches[1]);
+		}
+
+		// Match all instances of Section IN ('value1', 'value2', 'value3')
+		if (preg_match_all("/Section\s*IN\s*\(\s*'([^']+)'\s*(?:,\s*'([^']+)'\s*)*\)/", $query, $matches)) {
+			foreach ($matches[0] as $match) {
+				preg_match_all("/'([^']+)'/", $match, $values);
+				$query_sections = array_merge($query_sections, $values[1]);
+			}
+		}
+
+		$query_sections = array_unique($query_sections);
+
 		$etc_search_match = true;
 		$etc_search_match_query = false;
 		$query = preg_replace_callback('/\{((?:[^{}]|(?0))+)\}/U', 'etc_search_gps', $oldquery = $query);
@@ -324,7 +340,11 @@ function etc_search_get_results($params, $live=true)
 			$s_filter = '';
 			$rs = safe_column("name", "txp_section", "searchable != '1'");
 			if ($rs) {
-				foreach($rs as $name) $s_filter .= " AND Section != '".doSlash($name)."'";
+				foreach($rs as $name) {
+					if (!in_array($name, $query_sections)) {
+						$s_filter .= " AND Section != '".doSlash($name)."'";
+					}
+				}
 			}
 			$table = safe_pfx('textpattern');
 			$now_posted = is_callable('now') ? now('posted') : 'NOW()';

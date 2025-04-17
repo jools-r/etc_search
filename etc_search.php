@@ -20,6 +20,7 @@ if(txpinterface == 'admin') {
 	add_privs('plugin_prefs.etc_search','1,2');
 	register_callback('etc_search_tab', 'plugin_prefs.etc_search');
 	register_callback('etc_search_install', 'plugin_lifecycle.etc_search');
+	register_callback('etc_search_pophelp', 'admin_help', 'etc_search_logical_operators');
 }
 elseif(gps('etc_search') !== '') {
 	register_callback('etc_search_term', 'pretext_end');
@@ -86,9 +87,7 @@ function etc_search_tab($event, $step, $message='') {
 	$rs = safe_rows('*', 'etc_search', '1');
 	pagetop(gTxt('etc_search'), $message);
 
-	$style = '.etc-search-form input[type="text"]{width:100%}
-		.etc-two-column{width:100%;border-spacing:1em 0;border-collapse:separate;}
-		.etc-search-form{padding:0 1em;display:none}';
+	$style = '.txp-form-field-label:has(+ .txp-form-field-instructions),.txp-form-field-instructions {display:inline;}';
 	if (class_exists('\Textpattern\UI\Style')) {
 		echo Txp::get('\Textpattern\UI\Style')->setContent($style);
 	} else {
@@ -713,4 +712,11 @@ function etc_search($atts, $thing = '')
 		.'});'.n.'//]]></script>';
 	}
 	return $out;
+}
+
+function etc_search_pophelp($event, $step, $ui, $atts)
+{
+	$atts['data-item'] = gTxt('pophelp_' . $atts['help_var']);
+
+	return sp.href(span(gTxt('help'), array('class' => 'ui-icon ui-icon-help')), '#', $atts);
 }

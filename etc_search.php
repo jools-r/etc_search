@@ -27,6 +27,7 @@ elseif(gps('etc_search') !== '') {
 	if(ps('etc_search') !== '') register_callback('etc_search_callback', 'log_hit');
 }
 
+
 function etc_search_install($event='', $step='')
 {
 	if($step == 'deleted') {
@@ -61,24 +62,31 @@ function etc_search_install($event='', $step='')
 	}
 }
 
-function etc_search_tab($event, $step, $message='') {
+
+function etc_search_tab($event, $step, $message='')
+{
 	global $prefs;
 	$id = intval(gps('id'));
 	if($step && bouncer($step, array('save'=>true, 'ops'=>true))) if($step == 'save') switch(gps('save')) {
-		case 'Save' : safe_upsert('etc_search',
-			"query='".doSlash(gps('query'))."',
-			form1='".doSlash(gps('form1'))."',
-			form2='".doSlash(gps('form2'))."',
-			thing1='".doSlash(gps('thing1'))."',
-			thing2='".doSlash(gps('thing2'))."',
-			type='".doSlash(gps('type'))."'",
-			"id=".$id);
+		case 'Save' :
+			safe_upsert(
+				'etc_search',"
+				query='".doSlash(gps('query'))."',
+				form1='".doSlash(gps('form1'))."',
+				form2='".doSlash(gps('form2'))."',
+				thing1='".doSlash(gps('thing1'))."',
+				thing2='".doSlash(gps('thing2'))."',
+				type='".doSlash(gps('type'))."'",
+				"id=".$id
+			);
 			$ops = gps('etc_ops_'.$id);
 			if(!$id) $id = intval(getThing('SELECT LAST_INSERT_ID()'));
 			if($ops === '') {safe_delete('txp_prefs', "name='etc_search_ops_$id'"); $prefs['etc_search_ops_'.$id] = '';}
 			else set_pref('etc_search_ops_'.$id, $prefs['etc_search_ops_'.$id] = $ops, 'etc_search', PREF_HIDDEN);
 		break;
-		case 'Delete' : safe_delete('etc_search', "id=$id"); safe_delete('txp_prefs', "name='etc_search_ops_$id'");
+		case 'Delete' :
+			safe_delete('etc_search', "id=$id");
+			safe_delete('txp_prefs', "name='etc_search_ops_$id'");
 		break;
 	} elseif($step == 'ops') {
 			set_pref('etc_search_ops', $prefs['etc_search_ops'] = gps('etc_ops'), 'etc_search', PREF_HIDDEN);
@@ -123,7 +131,9 @@ function etc_search_tab($event, $step, $message='') {
 	echo etc_search_form(array('id'=>0, 'query'=>'', 'form1'=>'', 'form2'=>'', 'thing1'=>'', 'thing2'=>'', 'type'=>'')).n.'</div>';
 }
 
-function etc_search_form($row) {
+
+function etc_search_form($row)
+{
 	global $prefs;
 	if(!($search_fields = $prefs['searchable_article_fields'])) $search_fields = 'Title,Body';
 	$context = array();
@@ -223,6 +233,7 @@ function etc_search_form($row) {
 	echo wrapRegion('etc-form-group'.$row['id'], $out, 'etc-ops-group-content'.$row['id'], ($row['id'] ? gTxt('etc_search_form_number').$row['id'] : gTxt('etc_search_new_form')), 'etc_search_global-ops_'.$row['id']);
 }
 
+
 function etc_search_parse($string, $pattern, &$matches, $open = '', $close = '', $replace = array())
 {
 	if(!$string || !$pattern) return $string;
@@ -234,6 +245,7 @@ function etc_search_parse($string, $pattern, &$matches, $open = '', $close = '',
 	}
 	return implode('', $string);
 }
+
 
 function etc_search_query_($string, $fields, $ops=null){
 	if(!$fields || $string === '') return '1';
@@ -329,6 +341,7 @@ function etc_search_query($atts)
 	if(isset($safe_match)) $etc_search_match_query = $safe_match;
 	return count($result) == 1 ? $result[0] : '('.implode(') OR (', $result).')';
 }
+
 
 function etc_search_get_results($params, $live=true)
 {
@@ -487,7 +500,6 @@ function etc_search_get_results($params, $live=true)
 		$thispage['context']     = 'article';
 		$thispage['grand_total'] = $rc;
 		$thispage['total']       = $rc - $etc_page_counter['from'] + 1;
-
 	}
 	if($live && $lim_it && $thispage['numPages'] > $pg) $o[] = gTxt('more').'&hellip;';
 
@@ -495,6 +507,7 @@ function etc_search_get_results($params, $live=true)
 /*  echo('<?xml version=\'1.0\' encoding=\'utf-8\' ?>');*/
 	return $matched ? $o : null;
 }
+
 
 function etc_search_result_count($atts)
 {
@@ -509,16 +522,17 @@ function etc_search_result_count($atts)
 	return(strtr($text, array('{from}' => $etc_page_counter['from'], '{to}' => $etc_page_counter['to'], '{total}' => $thispage['grand_total'], '{page}' => $thispage['pg'], '{pages}' => $thispage['numPages'])));
 }
 
+
 function etc_search_result_excerpt($atts)
 {
 	extract(lAtts(array(
-		'break'   => ' &#8230;',
-		'hilight' => 'strong',
-		'limit'   => 5,
-		'size'   => 50,
-		'showalways'   => "0",
-		'type'   => 'article',
-		'field'   => 'body'
+		'break'			=> ' &#8230;',
+		'hilight'		=> 'strong',
+		'limit'			=> 5,
+		'size'			=> 50,
+		'showalways'	=> "0",
+		'type'			=> 'article',
+		'field'			=> 'body'
 	), $atts));
 
 	global ${'this'.$type}, $pretext;
@@ -537,13 +551,10 @@ function etc_search_result_excerpt($atts)
 	if($m !== 'exact' && strpos($q, '"') !== false) $q = etc_search_parse($q, '/(".*")/Us', $quotes, '(', ')', array('"' => ''));
 	$q = htmlspecialchars($q, ENT_QUOTES);
 
-	if ($m === 'exact')
-	{
+	if ($m === 'exact') {
 		$regex_search = '/(?:\G|\s).{0,'.$size.'}'.$q.'.{0,'.$size.'}(?:\s|$)/iu';
 		$regex_hilite = $q;
-	}
-	else
-	{
+	} else {
 		$regex_hilite = strtr(preg_replace("/(?:$ops)+/", '|', $q), doSpecial($quotes));
 		$regex_search = '/(?:\G|\s).{0,'.$size.'}('.$regex_hilite.').{0,'.$size.'}(?:\s|$)/iu';
 	}
@@ -569,6 +580,7 @@ function etc_search_result_excerpt($atts)
 	return $result[0].(count($result) > 1 ? $break : '');
 }
 
+
 function etc_search_callback($event, $step)
 {
 	global $nolog;
@@ -578,7 +590,9 @@ function etc_search_callback($event, $step)
 	exit(etc_search_results(array(), null, true));
 }
 
-function etc_search_gps($matches) {
+
+function etc_search_gps($matches)
+{
 	global $pretext, $etc_search_ops, $etc_search_match, $etc_search_neg;
 	$slash = isset($etc_search_neg);//query db
 	$custom = $matches[1][0] === '?';
@@ -599,6 +613,7 @@ function etc_search_gps($matches) {
 	return !empty($fields) ? etc_search_query_($q, $fields, $etc_search_ops) : $q;
 }
 
+
 function etc_search_term($event, $step)
 {
 	global $pretext, $etc_search_match;
@@ -610,6 +625,7 @@ function etc_search_term($event, $step)
 	if(!$etc_search_match) $pretext['q'] = '';
 }
 
+
 function etc_search_results($atts, $thing=null, $live=false)
 {
 	global $has_article_tag, $prefs, $pretext;
@@ -617,16 +633,16 @@ function etc_search_results($atts, $thing=null, $live=false)
 	$has_article_tag = true;
 
 	extract(lAtts(array(
-		'id'         => '',
-//		'format'         => '{q}',
-		'query'         => null,
-//		'html_id'         => '',
-		'form'         => '',
-		'no_matches'   => gTxt('no_search_matches'),
-		'limit'     => 10,
-		'wraptag'         => '',
-		'class'         => '',
-		'break'   => ''
+		'id'			=> '',
+//		'format'		=> '{q}',
+		'query'			=> null,
+//		'html_id'		=> '',
+		'form'			=> '',
+		'no_matches'	=> gTxt('no_search_matches'),
+		'limit'			=> 10,
+		'wraptag'		=> '',
+		'class'			=> '',
+		'break'			=> ''
 	), $atts, false));
 
 	if(isset($query)) $params = array('etc_search' => do_list($id), 'etc_limit' => $limit, 'q' => $query);
@@ -661,26 +677,27 @@ function etc_search_results($atts, $thing=null, $live=false)
 	return ($o ? doWrap($o, $wraptag, $break, $class) : ($o === null ? '' : parse($no_matches)));
 }
 
+
 function etc_search($atts, $thing = '')
 {
 	global $prefs;
 	extract(lAtts(array(
-		'id'         => '0',
-		'target'         => '',
-		'live'         => '600',
-		'match'         => '',
-		'action'         => null,
-		'format'         => '',
-		'minlength'            => 1,
-		'html_id'         => str_replace('.', '', uniqid("live_search_", true)),
-		'label'           => gTxt('search'),
-		'size'            => 0,
-		'placeholder'   => '',
-		'limit'     => 0,
-		'form'         => '',
-		'class'         => '',
-		'wraptag'         => '',
-		'break'   => 'br'
+		'id'			=> '0',
+	'target'			=> '',
+		'live'			=> '600',
+		'match'			=> '',
+		'action'		=> null,
+		'format'		=> '',
+		'minlength'		=> 1,
+		'html_id'		=> str_replace('.', '', uniqid("live_search_", true)),
+		'label'			=> gTxt('search'),
+		'size'			=> 0,
+		'placeholder'	=> '',
+		'limit'			=> 0,
+		'form' 			=> '',
+		'class'			=> '',
+		'wraptag'		=> '',
+		'break'			=> 'br'
 	), $atts));
 
 	$id = implode('.', do_list($id));
@@ -722,6 +739,7 @@ function etc_search($atts, $thing = '')
 	}
 	return $out;
 }
+
 
 function etc_search_pophelp($event, $step, $ui, $atts)
 {

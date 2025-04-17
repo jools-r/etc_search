@@ -15,7 +15,7 @@ if (class_exists('\Textpattern\Tag\Registry')) {
 
 if(txpinterface == 'admin') {
 	add_privs('etc_search', '1,2');
-	register_tab("extensions", "etc_search", "Search settings");
+	register_tab("extensions", "etc_search", gTxt('etc_search'));
 	register_callback("etc_search_tab", "etc_search");
 	add_privs('plugin_prefs.etc_search','1,2');
 	register_callback('etc_search_tab', 'plugin_prefs.etc_search');
@@ -26,8 +26,7 @@ elseif(gps('etc_search') !== '') {
 	if(ps('etc_search') !== '') register_callback('etc_search_callback', 'log_hit');
 }
 
-function etc_search_install($event='', $step='')
-{
+function etc_search_install($event='', $step=''){
 	if($step == 'deleted') {
 		safe_delete('txp_prefs', "name LIKE 'etc\_search\_%'");
 		safe_delete("txp_form", "name = 'etc_search_results'");
@@ -60,15 +59,14 @@ function etc_search_install($event='', $step='')
 	}
 }
 
-function etc_search_tab($event, $step) {
+function etc_search_tab($event, $step, $message='') {
 	global $prefs;
 	$id = intval(gps('id'));
 	if($step && bouncer($step, array('save'=>true, 'ops'=>true))) if($step == 'save') switch(gps('save')) {
 		case 'Save' : safe_upsert('etc_search',
 			"query='".doSlash(gps('query'))."',
 			form1='".doSlash(gps('form1'))."',
-			form2='".doSlash(gps('form2'))."',
-			thing1='".doSlash(gps('thing1'))."',
+			form2='".doSlash(gps('form2'))."',			thing1='".doSlash(gps('thing1'))."',
 			thing2='".doSlash(gps('thing2'))."',
 			type='".doSlash(gps('type'))."'",
 			"id=".$id);
@@ -86,7 +84,7 @@ function etc_search_tab($event, $step) {
 	$ops = get_pref('etc_search_ops');
 
 	$rs = safe_rows('*', 'etc_search', '1');
-	pagetop("etc_search", "<strong>etc_search</strong> preferences");
+	pagetop(gTxt('etc_search'), $message);
 
 	$style = '.etc-search-form input[type="text"]{width:100%}
 		.etc-two-column{width:100%;border-spacing:1em 0;border-collapse:separate;}
@@ -96,75 +94,160 @@ function etc_search_tab($event, $step) {
 	} else {
 		echo '<style>' . $style. '</style>';
 	}
-	echo '<h1>etc_search setup</h1>'.n;
 
-	echo '<h2>Search settings</h2>'.n;
-	echo '<div class="summary-details"><h3 class="lever txp-summary"><a href="#etc-logic">Logical operators</a></h3>'.n;
-	echo '<form id="etc-logic" class="etc-search-form" action="?event=etc_search&step=ops" method="post">', n, '<p><label for="ops">JSON-encoded object (handle with care)</label><br />', fInput('text', 'etc_ops', $ops), tInput(), sInput('ops'), '</p><p>', fInput('submit', 'save', 'Save', 'publish'), n, '</p></form></div>', n;
+	echo tag(
+		hed(gTxt('etc_search_pane'), 1, array('class' => 'txp-heading')),
+		'div', array('class' => 'txp-layout-1col')
+	);
 
-	echo '<h2>Search forms</h2>'.n.'<div class="summary-details">'.n;
+	$etc_ops_form = form(
+		inputLabel(
+			'etc_ops',
+			fInput('text', 'etc_ops', $ops,'','','', 30, 0, 'etc_ops'),
+			gTxt('etc_search_logical_operators_global'),
+			array('etc_search_logical_operators', 'instructions_etc_search_logical_operators')
+		) .
+		eInput('etc_search') .
+		sInput('ops') .
+		graf(
+			fInput('submit', 'save', gTxt('save'), 'publish')
+		),
+		'', '', 'post', 'etc-search-form', '', 'etc-logic'
+	);
+
+	echo wrapRegion('etc-ops-group', $etc_ops_form, 'etc-ops-group-content', gTxt('etc_search_settings'), 'etc_search_global-ops');
+
+	echo hed(gTxt('etc_search_forms'), 2).n.'<div class="summary-details">'.n;
 	foreach($rs as $row) echo etc_search_form(doSpecial($row));
 	echo etc_search_form(array('id'=>0, 'query'=>'', 'form1'=>'', 'form2'=>'', 'thing1'=>'', 'thing2'=>'', 'type'=>'')).n.'</div>';
-/*
-	echo '<script>$(function () {
-		$(".lever a[href!=',"'#etc-form-".intval(gps('id'))."'", ']").trigger("click");
-	});</script>';
-*/
 }
 
 function etc_search_form($row) {
 	global $prefs;
 	if(!($search_fields = $prefs['searchable_article_fields'])) $search_fields = 'Title,Body';
 	$context = array();
-	echo '<h3 class="lever txp-summary"><a href="#etc-form-'.$row['id'].'">', ($row['id'] ? 'Search form '.$row['id'] : 'New search form'), '</a></h3>', n;
-	echo '<form id="etc-form-'.$row['id'].'" class="etc-search-form" method="post" action="?event=etc_search#etc-form-'.$row['id'].'"', ($row['id'] ? ' data-id="'.$row['id'].'"' : ''), '>', n;
-	echo '<p><label>context</label><br />', /*implode('&nbsp;&nbsp; ', $context)*/
-	radioSet(array('article'=>gTxt('article_context'), 'image'=>gTxt('image_context'), 'file'=>gTxt('file_context'), 'link'=>gTxt('link_context'), 'category'=>gTxt('category'), 'section'=>gTxt('section'), 'custom'=>'custom'), 'type', $row['type'], '', 'etc-'.$row['id']), '</p>', n;
-	echo '<p><label>query</label><br /><input type="text" name="query" value="', $row['query'], '" placeholder="{', $search_fields, '}" /></p>', n;
-	echo '<p><label>logical operators (JSON-encoded)</label><br /><input type="text" name="etc_ops_',$row['id'],'" value="', $row['id'] ? doSpecial(get_pref('etc_search_ops_'.$row['id'])) : '', '" placeholder="',doSpecial(get_pref('etc_search_ops')),'" /></p>', n;
-	echo '<table class="etc-two-column"><tr>', n;
-	echo '<td><fieldset><legend>Live search</legend>', n;
-	echo '<p><label>form</label><br /><input type="text" name="form1" value="', $row['form1'], '" placeholder="etc_search_results" /></p>', n;
-	echo '<p><label>or content</label><br /><textarea name="thing1" spellcheck="false">', $row['thing1'], '</textarea></p>', n;
-	echo '</fieldset></td>', n;
-	echo '<td><fieldset><legend>Static search</legend>', n;
-	echo '<p><label>form</label><br /><input type="text" name="form2" value="', $row['form2'], '" placeholder="search_results" /></p>', n;
-	echo '<p><label>or content</label><br /><textarea name="thing2" spellcheck="false">', $row['thing2'], '</textarea></p>', n;
-	echo '</fieldset></td>', n, '</tr></table>', n;
-	echo '<p>', sInput('save'), hInput('id', $row['id']), tInput(), fInput('submit', 'save', 'Save', 'publish'), ($row['id'] ? fInput('submit', 'save', 'Delete', 'publish') : ''), '</p>', n;
-	echo '</form>';
+
+	$out = [];
+	$out[] = tag_start('div', array('class' => 'txp-layout'));
+
+		$out[] = tag(
+				inputLabel('etc-'.$row['id'].'-type',
+				selectInput('type',
+					array(
+						'article' => gTxt('article_context'),
+						'image' => gTxt('image_context'),
+						'file' => gTxt('file_context'),
+						'link' => gTxt('link_context'),
+						'category' => gTxt('category'),
+						'section' => gTxt('section'),
+						'custom' => gTxt('custom_context')
+					),
+					$row['type'],
+					false,
+					'',
+					'etc-'.$row['id'].'-type'
+				),
+				gTxt('etc_search_context')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+		$out[] = tag(
+			inputLabel('etc-' . $row['id'] . '-ops',
+				fInput('text', 'etc_ops_' . $row['id'], ($row['id'] ? doSpecial(get_pref('etc_search_ops_' . $row['id'])) : ''),'','','', 30, 0, 'etc-'.$row['id'].'-ops', false, false, get_pref('etc_search_ops')),
+				gTxt('etc_search_logical_operators'),
+				array('etc_search_logical_operators', 'instructions_etc_search_logical_operators')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+	$out[] = tag_end('div');
+
+	$out[] = inputLabel('etc-' . $row['id'] . '-query',
+		fInput('text', 'query', htmlspecialchars_decode($row['query']), '', '', '', INPUT_XLARGE, 0, 'etc-'.$row['id'].'-query', false, false, '{' . $search_fields . '}'),
+		gTxt('etc_search_query')
+	) . n;
+
+	$out[] = tag_start('div', array('class' => 'txp-layout'));
+
+		$out[] = tag(
+			fieldset(
+				inputLabel('etc-' . $row['id'] . '-live-form',
+					fInput('text', 'form1', $row['form1'] ,'','','', 28, 0, 'etc-'.$row['id'].'-live-form', false, false, 'etc_search_results'),
+					gTxt('etc_search_use_form')
+				) .
+				inputLabel('etc-' . $row['id'] . '-live-tags',
+					text_area('thing1', 0, 0, $row['thing1'], 'etc-'.$row['id'].'-live-tags'),
+					gTxt('etc_search_use_content')
+				),
+				gTxt('etc_search_live_search')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+		$out[] = tag(
+			fieldset(
+				inputLabel('etc-' . $row['id'] . '-static-form',
+					fInput('text', 'form2', $row['form2'] ,'','','', 28, 0, 'etc-'.$row['id'].'-static-form', false, false, 'search_results'),
+					gTxt('etc_search_use_form')
+				) .
+				inputLabel('etc-' . $row['id'] . '-static-tags',
+					text_area('thing2', 0, 0, $row['thing2'], 'etc-'.$row['id'].'-static-tags'),
+					gTxt('etc_search_use_content')
+				),
+				gTxt('etc_search_static_search')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+	$out[] = tag_end('div');
+
+	$out[] = eInput('etc_search#etc-form-'.$row['id']) .
+	sInput('save') .
+	hInput('id', $row['id']) .
+	graf(
+		fInput('submit', 'save', gTxt('save'), 'publish') .
+		($row['id'] ? sp . fInput('submit', 'delete', gTxt('delete'), 'txp-button caution') : '')
+	);
+
+	$out = form(
+		join('', $out),
+		'', '', 'post', 'etc-search-form', '', 'etc-form-'.$row['id']
+	);
+
+	echo wrapRegion('etc-form-group'.$row['id'], $out, 'etc-ops-group-content'.$row['id'], ($row['id'] ? gTxt('etc_search_form_number').$row['id'] : gTxt('etc_search_new_form')), 'etc_search_global-ops_'.$row['id']);
 }
 
 function etc_search_parse($string, $pattern, &$matches, $open = '', $close = '', $replace = array())
 {
 	if(!$string || !$pattern) return $string;
 	$matches = array();
-	$string = preg_split($pattern, $string, null, PREG_SPLIT_DELIM_CAPTURE);
-	if(($count = count($string)) > 1) for($i = 1; $i < $count; $i += 2) {
+	$string = preg_split($pattern, $string, null, PREG_SPLIT_DELIM_CAPTURE);	if(($count = count($string)) > 1) for($i = 1; $i < $count; $i += 2) {
 		$matches[$open.$i.$close] = $replace ? strtr($string[$i], $replace) : $string[$i];
 		$string[$i] = $open.$i.$close;
 	}
 	return implode('', $string);
 }
 
-function etc_search_query_($string, $fields, $ops=null)
-{
+function etc_search_query_($string, $fields, $ops=null){
 	if(!$fields || $string === '') return '1';
 	global $etc_search_ops, $etc_search_neg, $etc_search_match_query;
 	$where = array();
 	if(!$ops || !is_array($ops)) {
 		$patterns = explode(';', $fields);
 		$fields = array();
-		$not = false;
-		while($string !== '' && $string[0] === $etc_search_neg) {$not = !$not; $string=substr($string, 1);}
+		$not = false;		while($string !== '' && $string[0] === $etc_search_neg) {$not = !$not; $string=substr($string, 1);}
 		if(preg_match('/^\[\"\d*\"\]$/', $string)) return $not ? "( NOT $string )" : $string;
 		$string = str_replace('{*}', '{{*}}', $string);
 		if($string > '') foreach($patterns as $pattern) {
 			unset($flds, $pat, $cond);
 			$items = explode('::', $pattern); //+ array(null, null, null)
 			if(count($items) == 3) list($flds, $pat, $cond) = $items;
-			else foreach($items as $item) {
-				if($item && $item[0] === '/') $pat = $item;
+			else foreach($items as $item) {				if($item && $item[0] === '/') $pat = $item;
 				elseif(preg_match('/^\s*[\w\.]+\s*(?:,\s*[\w\.]+\s*)*$/', $item)) $flds = $item;
 				else $cond = $item;
 			}

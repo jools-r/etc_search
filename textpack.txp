@@ -1,0 +1,55 @@
+#@owner etc_search
+#@language en, en-gb, en-us
+#@admin-side
+etc_search => Custom search
+#@etc_search
+etc_search_context => Search context
+etc_search_form_number => Search form #
+etc_search_forms => Search forms
+etc_search_live_search => Live search
+etc_search_logical_operators => Search operators
+etc_search_logical_operators_global => Default search operators
+instructions_etc_search_logical_operators => in JSON syntax
+pophelp_etc_search_logical_operators => JSON-encoded object defining which characters in a search query map to which MySQL operators, e.g. <code class="language-json">{"NOT":"-","AND":" ", "OR":","}</code>.
+etc_search_new_form => New search form
+etc_search_pane => etc_search settings
+etc_search_query => Search query
+etc_search_settings => Default search settings
+etc_search_static_search => Static search
+etc_search_use_content => or content
+etc_search_use_form => Form
+article_context => Article
+image_context => Image
+file_context => File
+link_context => Link
+custom_context => Custom
+#@public
+showing_search_results => Showing {from} to {to} of {total}
+#@owner etc_search
+#@language de
+#@admin-side
+etc_search => Benutzerdefinierte Sucheinstellungen
+#@etc_search
+etc_search_context => Kontext der Suche
+etc_search_form_number => Benutzerdefinierte Suche #
+etc_search_forms => Benutzerdefinierte Suchen
+etc_search_live_search => Live-Suche
+etc_search_logical_operators => Suchoperatoren
+etc_search_logical_operators_global => Standard-Suchoperatoren
+instructions_etc_search_logical_operators => in JSON-Syntax
+pophelp_etc_search_logical_operators => JSON-kodiertes Objekt, das definiert, welche Zeichen in einer Suchanfrage welchen MySQL-Operatoren entsprechen, z.B. <code class="language-json">{"NOT":"-","AND":" ", "OR":","}</code>.
+etc_search_new_form => Neue Suche
+etc_search_pane => etc_search Einstellungen
+etc_search_query => Suchabfrage
+etc_search_settings => Standard-Sucheinstellungen
+etc_search_static_search => Statische Suche
+etc_search_use_content => oder Inhalt
+etc_search_use_form => Baustein
+article_context => Artikel
+image_context => Bild
+file_context => Datei
+link_context => Link
+custom_context => Benutzerdefiniert
+#@public
+showing_search_results => Anzeige {from} bis {to} von {total}
+

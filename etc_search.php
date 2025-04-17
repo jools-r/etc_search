@@ -696,15 +696,15 @@ function etc_search($atts, $thing = '')
 	$q = (!$id || gps('etc_search') == $hash ? htmlspecialchars(gps('q')) : '');
 
 	$inputs = '';
-	if($hash) $inputs .= '<input type="hidden" data-etc="search" name="etc_search" value="'.$hash.'" />'.n;
-	if($format) $inputs .= '<input type="hidden" data-etc="search" name="etc_q" value="'.htmlspecialchars($format).'" />'.n;
-//	if($limit) $inputs .= '<input type="hidden" data-etc="search" name="etc_limit" value="'.$limit.'" />'.n;
-	if($match) $inputs .= '<input type="hidden" data-etc="search" name="m" value="'.$match.'" />'.n;
-	foreach($qs as $key => $val) $inputs .= '<input type="hidden" data-etc="search" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($val).'" />'.n;
-	$inputs .= $thing ? parse($thing) : '<input type="search" name="q"'.($size ? ' size="'.intval($size).'"' : '').' value="'.$q.'" placeholder="'.$placeholder.'" autocomplete="off" />'.n;
+	if($hash) $inputs .= '<input type="hidden" data-etc="search" name="etc_search" value="'.$hash.'">'.n;
+	if($format) $inputs .= '<input type="hidden" data-etc="search" name="etc_q" value="'.htmlspecialchars($format).'">'.n;
+//	if($limit) $inputs .= '<input type="hidden" data-etc="search" name="etc_limit" value="'.$limit.'">'.n;
+	if($match) $inputs .= '<input type="hidden" data-etc="search" name="m" value="'.$match.'">'.n;
+	foreach($qs as $key => $val) $inputs .= '<input type="hidden" data-etc="search" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($val).'">'.n;
+	$inputs .= $thing ? parse($thing) : '<input type="search" name="q"'.($size ? ' size="'.intval($size).'"' : '').' value="'.$q.'" placeholder="'.$placeholder.'" autocomplete="off">'.n;
 
 	$out = '<form id="'.$html_id.'" class="'.$class.'" method="get" action="'.$action.'">'.n
-	.($label ? '<label>'.$label.'<br /></label>' : '').$inputs
+	.($label ? '<label>'.$label.'</label><br>' : '').$inputs
 	.'</form>';
 
 	if($live) {

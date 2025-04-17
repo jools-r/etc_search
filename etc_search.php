@@ -27,7 +27,8 @@ elseif(gps('etc_search') !== '') {
 	if(ps('etc_search') !== '') register_callback('etc_search_callback', 'log_hit');
 }
 
-function etc_search_install($event='', $step=''){
+function etc_search_install($event='', $step='')
+{
 	if($step == 'deleted') {
 		safe_delete('txp_prefs', "name LIKE 'etc\_search\_%'");
 		safe_delete("txp_form", "name = 'etc_search_results'");
@@ -67,7 +68,8 @@ function etc_search_tab($event, $step, $message='') {
 		case 'Save' : safe_upsert('etc_search',
 			"query='".doSlash(gps('query'))."',
 			form1='".doSlash(gps('form1'))."',
-			form2='".doSlash(gps('form2'))."',			thing1='".doSlash(gps('thing1'))."',
+			form2='".doSlash(gps('form2'))."',
+			thing1='".doSlash(gps('thing1'))."',
 			thing2='".doSlash(gps('thing2'))."',
 			type='".doSlash(gps('type'))."'",
 			"id=".$id);
@@ -225,7 +227,8 @@ function etc_search_parse($string, $pattern, &$matches, $open = '', $close = '',
 {
 	if(!$string || !$pattern) return $string;
 	$matches = array();
-	$string = preg_split($pattern, $string, null, PREG_SPLIT_DELIM_CAPTURE);	if(($count = count($string)) > 1) for($i = 1; $i < $count; $i += 2) {
+	$string = preg_split($pattern, $string, null, PREG_SPLIT_DELIM_CAPTURE);
+	if(($count = count($string)) > 1) for($i = 1; $i < $count; $i += 2) {
 		$matches[$open.$i.$close] = $replace ? strtr($string[$i], $replace) : $string[$i];
 		$string[$i] = $open.$i.$close;
 	}
@@ -239,14 +242,16 @@ function etc_search_query_($string, $fields, $ops=null){
 	if(!$ops || !is_array($ops)) {
 		$patterns = explode(';', $fields);
 		$fields = array();
-		$not = false;		while($string !== '' && $string[0] === $etc_search_neg) {$not = !$not; $string=substr($string, 1);}
+		$not = false;
+		while($string !== '' && $string[0] === $etc_search_neg) {$not = !$not; $string=substr($string, 1);}
 		if(preg_match('/^\[\"\d*\"\]$/', $string)) return $not ? "( NOT $string )" : $string;
 		$string = str_replace('{*}', '{{*}}', $string);
 		if($string > '') foreach($patterns as $pattern) {
 			unset($flds, $pat, $cond);
 			$items = explode('::', $pattern); //+ array(null, null, null)
 			if(count($items) == 3) list($flds, $pat, $cond) = $items;
-			else foreach($items as $item) {				if($item && $item[0] === '/') $pat = $item;
+			else foreach($items as $item) {
+				if($item && $item[0] === '/') $pat = $item;
 				elseif(preg_match('/^\s*[\w\.]+\s*(?:,\s*[\w\.]+\s*)*$/', $item)) $flds = $item;
 				else $cond = $item;
 			}
@@ -311,7 +316,6 @@ function etc_search_query($atts)
 	if($id) foreach(do_list($id) as $item) {
 			if($item) $op = get_pref('etc_search_ops_'.$item);
 			$ops[] = json_decode(str_replace('\\', '\\\\', $op === '' ? get_pref('etc_search_ops') : $op), true);
-		
 	}
 	else $ops = array(json_decode(str_replace('\\', '\\\\', $split === '' ? get_pref('etc_search_ops') : $split), true));
 
@@ -420,6 +424,7 @@ function etc_search_get_results($params, $live=true)
 
 			default :
 			$s_filter = '';
+
 			$rs = safe_column("name", "txp_section", "searchable != '1'");
 			if ($rs) {
 				foreach($rs as $name) {
@@ -428,6 +433,7 @@ function etc_search_get_results($params, $live=true)
 					}
 				}
 			}
+
 			$table = safe_pfx('textpattern');
 			$now_posted = is_callable('now') ? now('posted') : 'NOW()';
 			$now_expires = is_callable('now') ? now('expires') : 'NOW()';
@@ -443,6 +449,7 @@ function etc_search_get_results($params, $live=true)
 */
 		$count = intval(getThing($count));
 		$rc += $count;
+
 		if($count <= $offset) {$offset -= $count; continue;} else $offset = 0;
 		$rs = ($max <= 0 || $newmax > 0 ? getRows($query.$order.($lim_it ? $lim_it : $limit)) : array());
 		$replacements = array();
@@ -480,6 +487,7 @@ function etc_search_get_results($params, $live=true)
 		$thispage['context']     = 'article';
 		$thispage['grand_total'] = $rc;
 		$thispage['total']       = $rc - $etc_page_counter['from'] + 1;
+
 	}
 	if($live && $lim_it && $thispage['numPages'] > $pg) $o[] = gTxt('more').'&hellip;';
 
@@ -491,6 +499,7 @@ function etc_search_get_results($params, $live=true)
 function etc_search_result_count($atts)
 {
 	global $thispage, $etc_page_counter;
+
 	if(empty($thispage) || empty($etc_page_counter)) return;
 
 	extract(lAtts(array(

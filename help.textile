@@ -1,0 +1,488 @@
+h1. etc_search
+
+h2. etc_search
+
+This plugin adds custom site search and live-search capabilities to Textpattern.
+
+In standard (static) mode, it outputs search results similar to @<txp:search_input />@. In live mode, with javascript enabled, it returns search matches in real time in a dropdown beneath the search input box. For browsers without javascript, hitting enter in live search will return a regular results page.
+
+etc_search also allows you to define custom search queries beyond the standard _Title_ and _Body_ fields of the in-built search. It can search all fields in articles, as well as in images, files, links, sections or categories, or combinations of them. Advanced users can write custom MySQL search queries to design specific search combinations.
+
+In addition, etc_search adds the ability to search for AND, OR and NOT combinations of terms: for example a search for @jaguar speed -car@ will display all matching results containing the strings “jaguar” and “speed”, but not “car”. The syntax can be customised in the _Default search settings_, or for each specific search type.
+
+Finally, the @etc_search_results@ tag can be used without the search input box to output the results of predefined or preset custom queries, expanding on the capabilities of @article_custom@ or other list tags.
+
+Nearly everything – input form, output form, animation, search query – is customisable.
+
+
+h2. Installation
+
+The plugin comprises two files: a plugin installer and a livesearch jquery script.
+
+h3. Plugin installer
+
+To install the plugin, paste the contents of the .txt installer into the box in _Admin › Plugins_. It will create a @etc_search@ table, two preferences and an  @etc_search_results@ article form as a starting point for live-search output. The plugin removes these on uninstall.
+
+h3. livesearch.jquery.js
+
+To use live search, install @livesearch.jquery.js@ in your site's or theme's javascript assets folder.
+
+@livesearch.jquery.js@ requires jQuery *1.8* or newer. You can use the @jquery.js@ javascript file bundled with Textpattern. Then include both of these files in the header of the web pages where you want to use the plugin, for example:
+
+bc. <script src="<txp:site_url />textpattern/jquery.js"></script>
+<script src="<txp:site_url />js/livesearch.jquery.js"></script>
+
+replacing @js/@ with your site's or theme's asset folder location.
+
+
+h2. Admin-side settings
+
+Go to _Extensions › Custom search_ to define custom search queries and default search operators.
+
+h3. Search operators
+
+Define the characters users may use to specify AND, OR or NOT combinations of search terms under _Default search settings_. The defaults can be overridden for specific search queries if desired. It takes the form of a JSON-encoded object defining which characters in a search query map to which MySQL operators, e.g.:
+
+bc. {"NOT":"-","AND":" ", "OR":","}
+
+Search operator combinations in the search input are processed from left to right.
+
+For example, with this search pattern:
+
+* @table -contents, group@ will show all matches containing “table” but not “contents” or matches containing “group”.
+* @(jaguar, mustang) car@ will show all matches containing “car” and either the word “jaguar” or “mustang”.
+
+The JSON-encoded object can be extended to encompass further MySQL logical or comparison operators, like @XOR@ or @>=@.
+
+h3. Search forms
+
+Each search form represents a custom search query. The @etc_search@ and @etc_search_output@ tags can process search queries individually or in combination, i.e. if you wish to search in articles and files, you can create two individual search forms and process both from one search input box without needing to write a custom query.
+
+h4. Settings
+
+*Context* %(secondary-text)mandatory%
+The textpattern content type to search in, or a custom-defined SQL query.
+Options: @Article@, @File@, @Image@, @Link@, @Category@, @Section@ or @Custom@.
+For all contexts apart from custom, you can use most of the respective txp:tags in your search output forms (see examples).
+
+*Search operators* %(secondary-text)optional%
+Custom search operators for this specific query. If left empty the default settings (see above) are used.
+
+h5. Search query
+
+*Search query* %(secondary-text)mandatory%
+A string pattern containing a valid MySQL SELECT query, for example with specific WHERE clauses.
+Use the placeholder @{field}@ to specify which db fields to search. To search multiple fields, place all the db field names in one set of curly braces.
+txp:tags, for example a pre-prepared @txp:variable@ can be used in the search query.
+
+h6. Regular content-type queries
+
+For regular textpattern content types, @SELECT … FROM table_name WHERE …@ clauses for the search term, time, the @Status@ and, in the case of articles, sections designated as not to be searched, +can be omitted+. For example to search in the article title, body, excerpt and keywords, the following query suffices:
+
+bc. {Title,Body,Excerpt,Keywords}
+
+_*Note:* Explicitly searching in a section normally excluded from search, or a Status that would normally be excluded from search results, overrides the default settings, Use this, for example, to create section-specific searches separate from the main site search, or to search 'Pending' or 'Draft' articles._
+
+h6. Custom queries
+
+Custom queries must be written out +with+ @SELECT … from table_name@ and @WHERE@ clauses and can include other SQL statements such as @JOIN@ (see examples).
+
+@{field}@ placeholders can still be used, and will be replaced with the appropriate full query string by the plugin.
+
+@WHERE@ conditions can be written as @WHERE {[?param::]match1;match2;…} AND/OR further_criteria …@.
+
+@param@
+The url variable to match against.
+Default (if omitted): @q@ (= the standard search term)
+
+@match@
+Each match item is a string in the form @fields::pattern::condition@:
+
+* @fields@ is a comma-separated list of db fields.
+* @pattern@ is a regexp to match search query against.
+Default: @/^.+$/s@ (= any query)
+* @condition@ is a MySQL WHERE clause to filter the specified @fields@.
+Default:  @{*} LIKE %search_term%@
+where @{*}@ is replaced by the previously specified @fields@ names,
+and @$n@ (e.g. $1, $2 …) is the replacement variable for each regexp group in @pattern@.
+
+h5. Live and static search output
+
+*Form* %(secondary-text)optional%
+The name of a txp-form to use for outputting the live or static search results.
+Default: @etc_search_results, search_results@
+
+*Content* %(secondary-text)optional%
+Alternatively enter your output patterns manually in the textarea. Use @{field}@ to output a search item, e.g. @{Title}@, @<txp:site_url />{Section}/{url_title}@. Field names will be escaped and must correspond to the field names in the database table, or to a defined token in a custom search query (for example @{myitem}@ when using @…AS myitem@ in your SQL query).
+
+If neither are specified, the @etc_search_results@ form will be used, failing that the standard @search_results@ form.
+
+
+
+h2. Tag: etc_search
+
+This tag outputs a static or live search input form. Use as a standalone tag for regular search input:
+
+bc. <txp:etc_search />
+
+or as a container to combine the results of multiple input tags:
+
+bc. <txp:etc_search>
+  <input name="a" />
+  <input name="b" />
+  ...
+</txp:etc_search>
+
+h3. Attributes
+
+*id*
+Comma-separated list of search form id numbers (see below)
+Default: 0 (= default search).
+
+*live*
+Milliseconds of user inactivity before live search starts.
+Set to @0@ to disable live search, or to @-600@ to make the results persist on the screen even after losing focus.
+Default: 600.
+
+*minlength*
+Minimum number of characters of user input before live search starts.
+Default: 1.
+
+*match*
+Search mode. Set to @exact@ if required.
+
+*format*
+Permits combining multiple URL @{variables}@ into a single search string, for example when using @<txp:etc_search />@ as a container.
+Example: @[==format="{q} @{c}"==]@ transforms the user input _[==pag @tips==]_ into the query string @?c=tips&q=pag&...@.
+Default: @{q}@ (= standard txp search string parameter).
+
+*action*
+URL of the page where static search results will show (in live-search after pressing enter).
+Default: the home page.
+
+*html_id*
+HTML @id@ attribute of the search form.
+Default: @live_search_[some_random_id]@.
+
+*class*
+HTML @class@ attribute of the search form.
+Default: @ls_search@.
+
+*target*
+Selector (for jQuery) of the live search results container.
+
+*form*
+Optional Textpattern form for live search results output.
+
+*label*
+Text for the label above the search box.
+Default: the localised language string for @search@.
+
+*size*
+Size of the search box (number of characters).
+
+*placeholder*
+Placeholder text for the search input box.
+Default: none.
+
+*limit*
+Maximum number of results in the live results list.
+Default: @0@ (= no limit).
+
+*wraptag*
+HTML tag wrapping a set of search results inside the form.
+Default: none.
+
+*break*
+HTML tag for breaks between items in the live results list.
+Default: @br@.
+
+
+
+h2. Tag: etc_search_results
+
+A replacement tag for the default (non-live) TXP search reults. Use  @<txp:etc_search_results />@ in place of @<txp:article />@ within an @<txp:if_search> … </txp:if_search>@ conditional container.
+
+Use it as a standalone tag:
+
+bc. <txp:etc_search_results />
+
+or as a container:
+
+bc. <txp:etc_search_results>
+  output tags
+<txp:else />
+  <txp:text item="no_search_matches" />
+</txp:etc_search_results>
+
+h3. Search results for specific search queries
+
+To output search results for a specific predefined search form, as defined in the admin-side settings, use the @id@ tag. You can place two or more mutually exclusive @<txp:etc_search_results />@ tags on the same page:
+
+bc. <txp:etc_search_results id="1,2" form="form1" />
+<txp:etc_search_results id="3" form="form2" />
+
+_Note: specifying a @form@ attribute (or container content) for multiple search queries ids overwrites the respective default form / content specified in the admin-side settings.
+
+h3. Attributes
+
+*id*
+Restricts search to one or more predefined search form(s) as defined in the admin-side settings.
+Default: @0@ (= standard search)
+Example: @id="1,2@ outputs search results according to the queries defined on the admin-side in search forms 1 and 2.
+Example: @id="-2,4"@. outputs search results according to all the queries defined on the admin-side *except for* those in search forms 2 and 4.
+
+*form*
+An output form for the search results.
+Default: undefined. By default the form or content specified in the admin-side settings is used. Specifying this attributes overwrites this for all the search ids specified.
+
+*query*
+A manually-specified search string. Use this, for example, to make search presets.
+Default: empty.
+Example: @query="red blue"@ is treated as @?q=red+blue@ and outputs all search matches with both “red“ and “blue” in the respective search query.
+
+This attribute makes it possible to use @<txp:etc_search_results />@ as a powerful alternative to @<txp:article_custom />@ with very customisable @where@ conditions.
+
+*no_matches*
+Text string to output when no search matches are found.
+Default: the localised language string for @no_search_matches@.
+
+*limit*
+Number of results per page.
+Default: @10@.
+
+*wraptag*
+HTML tag wrapping a set of search results.
+Default: empty.
+
+*break*
+HTML tag for breaks between items in the search results list.
+Default: empty.
+
+*class*
+HTML class for wraptag.
+Default: empty.
+
+
+
+h2. Tag: etc_search_result_excerpt
+
+A more customisable replacement for @<txp:search_result_excerpt />@ that can output excerpts from different fields.
+
+h3. Attributes
+
+*type* %(secondary-text)optional%
+The excerpt's content type.
+Example: @type="article"@.
+Default: article.
+
+*field* %(secondary-text)optional%
+The field to use for the excerpt.
+Example: @field="body"@.
+Default: body.
+
+*size* %(secondary-text)optional%
+The number of surrounding characters.
+Example: @size="50"@.
+Default: 50.
+
+*showalways* %(secondary-text)optional%
+Show an excerpt even if there is no matching term in the excerpt.
+Default: 0 (= off).
+
+*hilight* %(secondary-text)optional%
+HTML tag to use to highlight the matched term.
+Example: @hilight="mark"@.
+Default: strong.
+
+*limit* %(secondary-text)optional%
+The number of search matches in an excerpt.
+Example: @limit="3"@.
+Default: 5.
+
+*break* %(secondary-text)optional%
+Separator between found matches.
+Example: @break=" // "@.
+Default: @…@.
+
+
+
+h2. Tag: etc_search_result_count
+
+Outputs the number of search matches found, if required written out in a sentence.
+
+h3. Attributes
+
+*text* %(secondary-text)optional%
+A text string containing the placeholders @{from}@, @{to}@, @{total}@, @{page}@, @{pages}@ to display a string like _Results 6 to 10 of 27_.
+Default: the localised language string for @showing_search_results@.
+
+
+
+h2. Tag: etc_search_query
+
+This tags makes it possible to transform search strings into SQL clauses, e.g. @(jaguar, mustang) car@ into @(Keywords LIKE '%jaguar%' OR Keywords LIKE '%mustang%') AND Keywords LIKE '%car%'@.
+
+h3. Attributes
+
+*query* %(secondary-text)mandatory%
+A manually specified search term combination (as opposed to a user-supplied search input).
+Example: @query="(jaguar, mustang) car"@;
+
+*id* %(secondary-text)optional%
+The search form to use, as defined in the admin-side settings.
+
+*split* %(secondary-text)optional%
+Override for logical operators.
+Example: @split='{"AND":"/\s+/", "OR":","}'@;
+Default: the standard logical operators as defined in the respective search form, or in the default settings.
+
+*match* %(secondary-text)mandatory%
+Match rule as @pattern::condition@ (see _Admin-side settings › Custom queries_).
+Example: @match="/\w+/::Keywords LIKE '%$0%'"@.
+
+
+
+h2. Examples
+
+
+h3. Example 1: Expand default search to search other fields
+
+By default, *etc_search* acts like the built-in Textpattern search, querying articles @Title@ and @Body@. If you want to also make @Keywords@ and @Excerpt@ searchable, create a new search form (e.g. search form ID 1) with:
+
+bc. Context: Article
+Query: {Title,Body,Keywords,Excerpt}
+
+Then use this tag to for the search input:
+
+bc. <txp:etc_search id="1" />
+
+
+h3. Example 2: Searching in a specific section / sections
+
+bc. Context: Article
+Query: {Title,Body} AND Section = 'private'
+
+Note: if the ‘private‘ section has been excluded from default search in the section settings, this search query will override that exclusion but still respect any other excluded sections.
+
+To restrict a search to multiple sections:
+
+bc. Query: {Title,Body} AND Section IN ('section-a', 'section-b', 'section-c')
+
+
+h3. Example 3: Use a txp:tag in the search query
+
+To search articles in all the child categories of a certain parent category, first define a "txp:variable":https://docs.textpattern.com/tags/variable further up the page containing a list of the category names of the child categories. For a MySQL query, the category names need to be surrounded by quotes (@escape="quote"@):
+
+bc. <txp:variable name="childcats" escape="db" trim>
+  <txp:category_list type="article" parent="parentcat" exclude="parentcat" break=","><txp:category escape="quote" /></txp:category_list>
+</txp:variable>
+
+Note: All user-definable input for database queries should be escaped (@escape="db"@).
+
+bc. Context: Article
+Query: {Title,Body, Excerpt} AND ( Category1 IN (<txp:variable name="childcats" />) OR Category2 IN (<txp:variable name="childcats" />) )
+
+
+h3. Example 4: Searching images, files or links
+
+To search images or files, set the appropriate context and use placeholders that correspond to the database column names in the "txp_file":https://github.com/textpattern/textpattern/blob/dev/textpattern/vendors/Textpattern/DB/Tables/txp_file.table, "txp_image":https://github.com/textpattern/textpattern/blob/dev/textpattern/vendors/Textpattern/DB/Tables/txp_image.table and "txp_link":https://github.com/textpattern/textpattern/blob/21a966d3f71520b061c8f646c2a8520837142a32/textpattern/vendors/Textpattern/DB/Tables/txp_link.table tables. The following example is for files:
+
+bc. Context: File
+Query: {title,description} ORDER BY created DESC
+
+For your output form (or the contents panel in the search settings), you can use the corresponding txp:tags for  "images":https://docs.textpattern.com/tags/types/image-tags, "files":https://docs.textpattern.com/tags/types/file-tags or "links":https://docs.textpattern.com/tags/types/link-tags. Use the _type_ and _field_ attributes of “etc_search_result_excerpt” to output a corresponding excerpt.
+
+bc. <txp:file_download_name wraptag="p" />
+<txp:etc_search_result_excerpt type="file" field="description" />
+
+
+h3. Example 5: Searching a date range + combining fields
+
+The following query returns articles published between _min_ and _max_ days ago:
+
+bc. Context: Article
+Query: {/^(\d+)\.{2,}(\d+)$/::DATEDIFF(NOW(), Posted) BETWEEN $1 AND $2}
+
+Example user input: @1..365@ (= in the last year)
+
+bc. <txp:etc_search id="2">
+  <input type="search" name="q" placeholder="min..max" /><br>
+  <input type="submit" />
+</txp:etc_search>
+
+To use two input boxes – _min_ and _max_ – as input, pass the input from the two fields as a single variable using the @format@ attribute:
+
+bc. <txp:etc_search id="2" format="{min}..{max}">
+  Tips published between <input name="min" /> and <input name="max" /> days ago:
+  <input type="submit" />
+</txp:etc_search>
+
+
+h3. Example 6: Custom queries – Searching across content types
+
+A simple search across multiple content types, e.g. articles and files, can be achieved by creating two or more separate search queries and outputing the results of each by specifying the search query id numbers:
+
+bc. <txp:etc_search id="1,2" />
+
+where search query 1 is the article query and search query 2 is a file query.
+
+More detailed interdependencies can be constructed as a _custom_ search query. For example, to search for text in image captions but display the titles of the articles where the image features as an article image, do the following:
+
+bc. Context: Custom
+Query: SELECT txp.ID,txp.Title,img.caption FROM textpattern txp JOIN txp_image img ON FIND_IN_SET(img.id,txp.Image) WHERE {img.caption}
+
+Note I: here you need to write out the parts of the query in full, e.g. with @SELECT … FROM … WHERE …@.
+Note II: For custom queries and cross-context queries, you may find that the regular txp:tags no longer work. In this case use the respective database field name in curly braces, e.g. @{Title}@, @{caption}@, etc. in your search output code.
+
+
+h3. Example 7: Faceted search
+
+To extend the regular article search to include articles where a separate search term appears in an article image's caption, you can add a search prefix, e.g. @cap:@ to create search combinations, in effect a form of faceted search:
+
+bc. Context: Article
+Query: SELECT txp.*,img.caption FROM textpattern txp JOIN txp_image img ON FIND_IN_SET(img.id,txp.Image) WHERE {img.caption::/^cap:(.+)$/::{*} LIKE '%$1%'}
+
+Live form output:
+
+bc. <a href='<txp:permlink />' title='{caption}'><txp:title /></a>
+
+Static form output:
+
+bc. <h3><txp:permlink><txp:title /></txp:permlink></h3><txp:excerpt />
+
+If this is search query ID#2, then specify @0@ (for default search) along with id @2@ to combine both the regular and caption search:
+
+bc. <txp:etc_search id="0,2" />
+
+
+h2. Styling live-search
+
+The live search component comprises a search input box and search results output zone contained within a form element with the @id@ attribute set in the @html_id@ attribute of the @etc_search@ tag. A class can likewise be specified via the @class@ attribute. Reference the id or class in your CSS to style the contained elements.
+
+h3. The search zone
+
+A text input box with an optional label (followed by a line break if defined).
+
+Wrapper: defined by the _wraptag_ attribute, e.g. @div@.
+Class: defined by the _class_ attribute, e.g. @ls_search@
+
+Style it using a CSS rule like this one:
+
+bc. .ls_search input {
+    font-size: 10px;
+    color: #000;
+}
+
+h3. The results zone
+
+A list of results in a container. If at least one result is found, the results are output using the specified @wraptag@ and @break@ attributes. If no results are found, the localised language string for @no_search_matches@ is shown.
+
+The results container is by default:
+
+Wrapper: @div@.
+Class: @ls_results@
+
+You can override this by specifying the @target@ attribute.
+
+To change the default animation, unbind the @update.html_id@ event of the @target@ and replace with your own jQuery animations. You can also set @start@ and @stop@ events, fired at the beginning and the end of live AJAX requests.

@@ -126,9 +126,9 @@ function etc_search_tab($event, $step, $message='')
 
 	echo wrapRegion('etc-ops-group', $etc_ops_form, 'etc-ops-group-content', gTxt('etc_search_settings'), 'etc_search_global-ops');
 
-	echo hed(gTxt('etc_search_forms'), 2).n.'<div class="summary-details">'.n;
+	echo hed(gTxt('etc_search_forms'), 2).n;
 	foreach($rs as $row) echo etc_search_form(doSpecial($row));
-	echo etc_search_form(array('id'=>0, 'query'=>'', 'form1'=>'', 'form2'=>'', 'thing1'=>'', 'thing2'=>'', 'type'=>'')).n.'</div>';
+	echo etc_search_form(array('id'=>0, 'query'=>'', 'form1'=>'', 'form2'=>'', 'thing1'=>'', 'thing2'=>'', 'type'=>'')).n;
 }
 
 

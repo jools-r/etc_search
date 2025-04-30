@@ -15,16 +15,18 @@ if (class_exists('\Textpattern\Tag\Registry')) {
 
 if(txpinterface == 'admin') {
 	add_privs('etc_search', '1,2');
-	register_tab("extensions", "etc_search", "Search settings");
+	register_tab("extensions", "etc_search", gTxt('etc_search'));
 	register_callback("etc_search_tab", "etc_search");
 	add_privs('plugin_prefs.etc_search','1,2');
 	register_callback('etc_search_tab', 'plugin_prefs.etc_search');
 	register_callback('etc_search_install', 'plugin_lifecycle.etc_search');
+	register_callback('etc_search_pophelp', 'admin_help', 'etc_search_logical_operators');
 }
 elseif(gps('etc_search') !== '') {
 	register_callback('etc_search_term', 'pretext_end');
 	if(ps('etc_search') !== '') register_callback('etc_search_callback', 'log_hit');
 }
+
 
 function etc_search_install($event='', $step='')
 {
@@ -60,24 +62,31 @@ function etc_search_install($event='', $step='')
 	}
 }
 
-function etc_search_tab($event, $step) {
+
+function etc_search_tab($event, $step, $message='')
+{
 	global $prefs;
 	$id = intval(gps('id'));
 	if($step && bouncer($step, array('save'=>true, 'ops'=>true))) if($step == 'save') switch(gps('save')) {
-		case 'Save' : safe_upsert('etc_search',
-			"query='".doSlash(gps('query'))."',
-			form1='".doSlash(gps('form1'))."',
-			form2='".doSlash(gps('form2'))."',
-			thing1='".doSlash(gps('thing1'))."',
-			thing2='".doSlash(gps('thing2'))."',
-			type='".doSlash(gps('type'))."'",
-			"id=".$id);
+		case 'Save' :
+			safe_upsert(
+				'etc_search',"
+				query='".doSlash(gps('query'))."',
+				form1='".doSlash(gps('form1'))."',
+				form2='".doSlash(gps('form2'))."',
+				thing1='".doSlash(gps('thing1'))."',
+				thing2='".doSlash(gps('thing2'))."',
+				type='".doSlash(gps('type'))."'",
+				"id=".$id
+			);
 			$ops = gps('etc_ops_'.$id);
 			if(!$id) $id = intval(getThing('SELECT LAST_INSERT_ID()'));
 			if($ops === '') {safe_delete('txp_prefs', "name='etc_search_ops_$id'"); $prefs['etc_search_ops_'.$id] = '';}
 			else set_pref('etc_search_ops_'.$id, $prefs['etc_search_ops_'.$id] = $ops, 'etc_search', PREF_HIDDEN);
 		break;
-		case 'Delete' : safe_delete('etc_search', "id=$id"); safe_delete('txp_prefs', "name='etc_search_ops_$id'");
+		case 'Delete' :
+			safe_delete('etc_search', "id=$id");
+			safe_delete('txp_prefs', "name='etc_search_ops_$id'");
 		break;
 	} elseif($step == 'ops') {
 			set_pref('etc_search_ops', $prefs['etc_search_ops'] = gps('etc_ops'), 'etc_search', PREF_HIDDEN);
@@ -86,54 +95,144 @@ function etc_search_tab($event, $step) {
 	$ops = get_pref('etc_search_ops');
 
 	$rs = safe_rows('*', 'etc_search', '1');
-	pagetop("etc_search", "<strong>etc_search</strong> preferences");
+	pagetop(gTxt('etc_search'), $message);
 
-	$style = '.etc-search-form input[type="text"]{width:100%}
-		.etc-two-column{width:100%;border-spacing:1em 0;border-collapse:separate;}
-		.etc-search-form{padding:0 1em;display:none}';
+	$style = '.txp-form-field-label:has(+ .txp-form-field-instructions),.txp-form-field-instructions {display:inline;}';
 	if (class_exists('\Textpattern\UI\Style')) {
 		echo Txp::get('\Textpattern\UI\Style')->setContent($style);
 	} else {
 		echo '<style>' . $style. '</style>';
 	}
-	echo '<h1>etc_search setup</h1>'.n;
 
-	echo '<h2>Search settings</h2>'.n;
-	echo '<div class="summary-details"><h3 class="lever txp-summary"><a href="#etc-logic">Logical operators</a></h3>'.n;
-	echo '<form id="etc-logic" class="etc-search-form" action="?event=etc_search&step=ops" method="post">', n, '<p><label for="ops">JSON-encoded object (handle with care)</label><br />', fInput('text', 'etc_ops', $ops), tInput(), sInput('ops'), '</p><p>', fInput('submit', 'save', 'Save', 'publish'), n, '</p></form></div>', n;
+	echo tag(
+		hed(gTxt('etc_search_pane'), 1, array('class' => 'txp-heading')),
+		'div', array('class' => 'txp-layout-1col')
+	);
 
-	echo '<h2>Search forms</h2>'.n.'<div class="summary-details">'.n;
+	$etc_ops_form = form(
+		inputLabel(
+			'etc_ops',
+			fInput('text', 'etc_ops', $ops,'','','', 30, 0, 'etc_ops'),
+			gTxt('etc_search_logical_operators_global'),
+			array('etc_search_logical_operators', 'instructions_etc_search_logical_operators')
+		) .
+		eInput('etc_search') .
+		sInput('ops') .
+		graf(
+			fInput('submit', 'save', gTxt('save'), 'publish')
+		),
+		'', '', 'post', 'etc-search-form', '', 'etc-logic'
+	);
+
+	echo wrapRegion('etc-ops-group', $etc_ops_form, 'etc-ops-group-content', gTxt('etc_search_settings'), 'etc_search_global-ops');
+
+	echo hed(gTxt('etc_search_forms'), 2).n;
 	foreach($rs as $row) echo etc_search_form(doSpecial($row));
-	echo etc_search_form(array('id'=>0, 'query'=>'', 'form1'=>'', 'form2'=>'', 'thing1'=>'', 'thing2'=>'', 'type'=>'')).n.'</div>';
-/*
-	echo '<script>$(function () {
-		$(".lever a[href!=',"'#etc-form-".intval(gps('id'))."'", ']").trigger("click");
-	});</script>';
-*/
+	echo etc_search_form(array('id'=>0, 'query'=>'', 'form1'=>'', 'form2'=>'', 'thing1'=>'', 'thing2'=>'', 'type'=>'')).n;
 }
 
-function etc_search_form($row) {
+
+function etc_search_form($row)
+{
 	global $prefs;
 	if(!($search_fields = $prefs['searchable_article_fields'])) $search_fields = 'Title,Body';
 	$context = array();
-	echo '<h3 class="lever txp-summary"><a href="#etc-form-'.$row['id'].'">', ($row['id'] ? 'Search form '.$row['id'] : 'New search form'), '</a></h3>', n;
-	echo '<form id="etc-form-'.$row['id'].'" class="etc-search-form" method="post" action="?event=etc_search#etc-form-'.$row['id'].'"', ($row['id'] ? ' data-id="'.$row['id'].'"' : ''), '>', n;
-	echo '<p><label>context</label><br />', /*implode('&nbsp;&nbsp; ', $context)*/
-	radioSet(array('article'=>gTxt('article_context'), 'image'=>gTxt('image_context'), 'file'=>gTxt('file_context'), 'link'=>gTxt('link_context'), 'category'=>gTxt('category'), 'section'=>gTxt('section'), 'custom'=>'custom'), 'type', $row['type'], '', 'etc-'.$row['id']), '</p>', n;
-	echo '<p><label>query</label><br /><input type="text" name="query" value="', $row['query'], '" placeholder="{', $search_fields, '}" /></p>', n;
-	echo '<p><label>logical operators (JSON-encoded)</label><br /><input type="text" name="etc_ops_',$row['id'],'" value="', $row['id'] ? doSpecial(get_pref('etc_search_ops_'.$row['id'])) : '', '" placeholder="',doSpecial(get_pref('etc_search_ops')),'" /></p>', n;
-	echo '<table class="etc-two-column"><tr>', n;
-	echo '<td><fieldset><legend>Live search</legend>', n;
-	echo '<p><label>form</label><br /><input type="text" name="form1" value="', $row['form1'], '" placeholder="etc_search_results" /></p>', n;
-	echo '<p><label>or content</label><br /><textarea name="thing1" spellcheck="false">', $row['thing1'], '</textarea></p>', n;
-	echo '</fieldset></td>', n;
-	echo '<td><fieldset><legend>Static search</legend>', n;
-	echo '<p><label>form</label><br /><input type="text" name="form2" value="', $row['form2'], '" placeholder="search_results" /></p>', n;
-	echo '<p><label>or content</label><br /><textarea name="thing2" spellcheck="false">', $row['thing2'], '</textarea></p>', n;
-	echo '</fieldset></td>', n, '</tr></table>', n;
-	echo '<p>', sInput('save'), hInput('id', $row['id']), tInput(), fInput('submit', 'save', 'Save', 'publish'), ($row['id'] ? fInput('submit', 'save', 'Delete', 'publish') : ''), '</p>', n;
-	echo '</form>';
+
+	$out = [];
+	$out[] = tag_start('div', array('class' => 'txp-layout'));
+
+		$out[] = tag(
+				inputLabel('etc-'.$row['id'].'-type',
+				selectInput('type',
+					array(
+						'article' => gTxt('article_context'),
+						'image' => gTxt('image_context'),
+						'file' => gTxt('file_context'),
+						'link' => gTxt('link_context'),
+						'category' => gTxt('category'),
+						'section' => gTxt('section'),
+						'custom' => gTxt('custom_context')
+					),
+					$row['type'],
+					false,
+					'',
+					'etc-'.$row['id'].'-type'
+				),
+				gTxt('etc_search_context')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+		$out[] = tag(
+			inputLabel('etc-' . $row['id'] . '-ops',
+				fInput('text', 'etc_ops_' . $row['id'], ($row['id'] ? doSpecial(get_pref('etc_search_ops_' . $row['id'])) : ''),'','','', 30, 0, 'etc-'.$row['id'].'-ops', false, false, get_pref('etc_search_ops')),
+				gTxt('etc_search_logical_operators'),
+				array('etc_search_logical_operators', 'instructions_etc_search_logical_operators')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+	$out[] = tag_end('div');
+
+	$out[] = inputLabel('etc-' . $row['id'] . '-query',
+		fInput('text', 'query', htmlspecialchars_decode($row['query']), '', '', '', INPUT_XLARGE, 0, 'etc-'.$row['id'].'-query', false, false, '{' . $search_fields . '}'),
+		gTxt('etc_search_query')
+	) . n;
+
+	$out[] = tag_start('div', array('class' => 'txp-layout'));
+
+		$out[] = tag(
+			fieldset(
+				inputLabel('etc-' . $row['id'] . '-live-form',
+					fInput('text', 'form1', $row['form1'] ,'','','', 28, 0, 'etc-'.$row['id'].'-live-form', false, false, 'etc_search_results'),
+					gTxt('etc_search_use_form')
+				) .
+				inputLabel('etc-' . $row['id'] . '-live-tags',
+					text_area('thing1', 0, 0, $row['thing1'], 'etc-'.$row['id'].'-live-tags'),
+					gTxt('etc_search_use_content')
+				),
+				gTxt('etc_search_live_search')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+		$out[] = tag(
+			fieldset(
+				inputLabel('etc-' . $row['id'] . '-static-form',
+					fInput('text', 'form2', $row['form2'] ,'','','', 28, 0, 'etc-'.$row['id'].'-static-form', false, false, 'search_results'),
+					gTxt('etc_search_use_form')
+				) .
+				inputLabel('etc-' . $row['id'] . '-static-tags',
+					text_area('thing2', 0, 0, $row['thing2'], 'etc-'.$row['id'].'-static-tags'),
+					gTxt('etc_search_use_content')
+				),
+				gTxt('etc_search_static_search')
+			),
+			'div',
+			array('class' => 'txp-layout-2col')
+		) . n;
+
+	$out[] = tag_end('div');
+
+	$out[] = eInput('etc_search#etc-form-'.$row['id']) .
+	sInput('save') .
+	hInput('id', $row['id']) .
+	graf(
+		fInput('submit', 'save', gTxt('save'), 'publish') .
+		($row['id'] ? sp . fInput('submit', 'delete', gTxt('delete'), 'txp-button caution') : '')
+	);
+
+	$out = form(
+		join('', $out),
+		'', '', 'post', 'etc-search-form', '', 'etc-form-'.$row['id']
+	);
+
+	echo wrapRegion('etc-form-group'.$row['id'], $out, 'etc-ops-group-content'.$row['id'], ($row['id'] ? gTxt('etc_search_form_number').$row['id'] : gTxt('etc_search_new_form')), 'etc_search_global-ops_'.$row['id']);
 }
+
 
 function etc_search_parse($string, $pattern, &$matches, $open = '', $close = '', $replace = array())
 {
@@ -147,8 +246,8 @@ function etc_search_parse($string, $pattern, &$matches, $open = '', $close = '',
 	return implode('', $string);
 }
 
-function etc_search_query_($string, $fields, $ops=null)
-{
+
+function etc_search_query_($string, $fields, $ops=null){
 	if(!$fields || $string === '') return '1';
 	global $etc_search_ops, $etc_search_neg, $etc_search_match_query;
 	$where = array();
@@ -229,7 +328,6 @@ function etc_search_query($atts)
 	if($id) foreach(do_list($id) as $item) {
 			if($item) $op = get_pref('etc_search_ops_'.$item);
 			$ops[] = json_decode(str_replace('\\', '\\\\', $op === '' ? get_pref('etc_search_ops') : $op), true);
-		
 	}
 	else $ops = array(json_decode(str_replace('\\', '\\\\', $split === '' ? get_pref('etc_search_ops') : $split), true));
 
@@ -243,6 +341,7 @@ function etc_search_query($atts)
 	if(isset($safe_match)) $etc_search_match_query = $safe_match;
 	return count($result) == 1 ? $result[0] : '('.implode(') OR (', $result).')';
 }
+
 
 function etc_search_get_results($params, $live=true)
 {
@@ -338,6 +437,7 @@ function etc_search_get_results($params, $live=true)
 
 			default :
 			$s_filter = '';
+
 			$rs = safe_column("name", "txp_section", "searchable != '1'");
 			if ($rs) {
 				foreach($rs as $name) {
@@ -346,6 +446,7 @@ function etc_search_get_results($params, $live=true)
 					}
 				}
 			}
+
 			$table = safe_pfx('textpattern');
 			$now_posted = is_callable('now') ? now('posted') : 'NOW()';
 			$now_expires = is_callable('now') ? now('expires') : 'NOW()';
@@ -361,6 +462,7 @@ function etc_search_get_results($params, $live=true)
 */
 		$count = intval(getThing($count));
 		$rc += $count;
+
 		if($count <= $offset) {$offset -= $count; continue;} else $offset = 0;
 		$rs = ($max <= 0 || $newmax > 0 ? getRows($query.$order.($lim_it ? $lim_it : $limit)) : array());
 		$replacements = array();
@@ -406,9 +508,11 @@ function etc_search_get_results($params, $live=true)
 	return $matched ? $o : null;
 }
 
+
 function etc_search_result_count($atts)
 {
 	global $thispage, $etc_page_counter;
+
 	if(empty($thispage) || empty($etc_page_counter)) return;
 
 	extract(lAtts(array(
@@ -418,16 +522,17 @@ function etc_search_result_count($atts)
 	return(strtr($text, array('{from}' => $etc_page_counter['from'], '{to}' => $etc_page_counter['to'], '{total}' => $thispage['grand_total'], '{page}' => $thispage['pg'], '{pages}' => $thispage['numPages'])));
 }
 
+
 function etc_search_result_excerpt($atts)
 {
 	extract(lAtts(array(
-		'break'   => ' &#8230;',
-		'hilight' => 'strong',
-		'limit'   => 5,
-		'size'   => 50,
-		'showalways'   => "0",
-		'type'   => 'article',
-		'field'   => 'body'
+		'break'			=> ' &#8230;',
+		'hilight'		=> 'strong',
+		'limit'			=> 5,
+		'size'			=> 50,
+		'showalways'	=> "0",
+		'type'			=> 'article',
+		'field'			=> 'body'
 	), $atts));
 
 	global ${'this'.$type}, $pretext;
@@ -446,13 +551,10 @@ function etc_search_result_excerpt($atts)
 	if($m !== 'exact' && strpos($q, '"') !== false) $q = etc_search_parse($q, '/(".*")/Us', $quotes, '(', ')', array('"' => ''));
 	$q = htmlspecialchars($q, ENT_QUOTES);
 
-	if ($m === 'exact')
-	{
+	if ($m === 'exact') {
 		$regex_search = '/(?:\G|\s).{0,'.$size.'}'.$q.'.{0,'.$size.'}(?:\s|$)/iu';
 		$regex_hilite = $q;
-	}
-	else
-	{
+	} else {
 		$regex_hilite = strtr(preg_replace("/(?:$ops)+/", '|', $q), doSpecial($quotes));
 		$regex_search = '/(?:\G|\s).{0,'.$size.'}('.$regex_hilite.').{0,'.$size.'}(?:\s|$)/iu';
 	}
@@ -478,6 +580,7 @@ function etc_search_result_excerpt($atts)
 	return $result[0].(count($result) > 1 ? $break : '');
 }
 
+
 function etc_search_callback($event, $step)
 {
 	global $nolog;
@@ -487,7 +590,9 @@ function etc_search_callback($event, $step)
 	exit(etc_search_results(array(), null, true));
 }
 
-function etc_search_gps($matches) {
+
+function etc_search_gps($matches)
+{
 	global $pretext, $etc_search_ops, $etc_search_match, $etc_search_neg;
 	$slash = isset($etc_search_neg);//query db
 	$custom = $matches[1][0] === '?';
@@ -508,6 +613,7 @@ function etc_search_gps($matches) {
 	return !empty($fields) ? etc_search_query_($q, $fields, $etc_search_ops) : $q;
 }
 
+
 function etc_search_term($event, $step)
 {
 	global $pretext, $etc_search_match;
@@ -519,6 +625,7 @@ function etc_search_term($event, $step)
 	if(!$etc_search_match) $pretext['q'] = '';
 }
 
+
 function etc_search_results($atts, $thing=null, $live=false)
 {
 	global $has_article_tag, $prefs, $pretext;
@@ -526,16 +633,16 @@ function etc_search_results($atts, $thing=null, $live=false)
 	$has_article_tag = true;
 
 	extract(lAtts(array(
-		'id'         => '',
-//		'format'         => '{q}',
-		'query'         => null,
-//		'html_id'         => '',
-		'form'         => '',
-		'no_matches'   => gTxt('no_search_matches'),
-		'limit'     => 10,
-		'wraptag'         => '',
-		'class'         => '',
-		'break'   => ''
+		'id'			=> '',
+//		'format'		=> '{q}',
+		'query'			=> null,
+//		'html_id'		=> '',
+		'form'			=> '',
+		'no_matches'	=> gTxt('no_search_matches'),
+		'limit'			=> 10,
+		'wraptag'		=> '',
+		'class'			=> '',
+		'break'			=> ''
 	), $atts, false));
 
 	if(isset($query)) $params = array('etc_search' => do_list($id), 'etc_limit' => $limit, 'q' => $query);
@@ -570,26 +677,27 @@ function etc_search_results($atts, $thing=null, $live=false)
 	return ($o ? doWrap($o, $wraptag, $break, $class) : ($o === null ? '' : parse($no_matches)));
 }
 
+
 function etc_search($atts, $thing = '')
 {
 	global $prefs;
 	extract(lAtts(array(
-		'id'         => '0',
-		'target'         => '',
-		'live'         => '600',
-		'match'         => '',
-		'action'         => null,
-		'format'         => '',
-		'minlength'            => 1,
-		'html_id'         => str_replace('.', '', uniqid("live_search_", true)),
-		'label'           => gTxt('search'),
-		'size'            => 0,
-		'placeholder'   => '',
-		'limit'     => 0,
-		'form'         => '',
-		'class'         => '',
-		'wraptag'         => '',
-		'break'   => 'br'
+		'id'			=> '0',
+	'target'			=> '',
+		'live'			=> '600',
+		'match'			=> '',
+		'action'		=> null,
+		'format'		=> '',
+		'minlength'		=> 1,
+		'html_id'		=> str_replace('.', '', uniqid("live_search_", true)),
+		'label'			=> gTxt('search'),
+		'size'			=> 0,
+		'placeholder'	=> '',
+		'limit'			=> 0,
+		'form' 			=> '',
+		'class'			=> '',
+		'wraptag'		=> '',
+		'break'			=> 'br'
 	), $atts));
 
 	$id = implode('.', do_list($id));
@@ -605,15 +713,15 @@ function etc_search($atts, $thing = '')
 	$q = (!$id || gps('etc_search') == $hash ? htmlspecialchars(gps('q')) : '');
 
 	$inputs = '';
-	if($hash) $inputs .= '<input type="hidden" data-etc="search" name="etc_search" value="'.$hash.'" />'.n;
-	if($format) $inputs .= '<input type="hidden" data-etc="search" name="etc_q" value="'.htmlspecialchars($format).'" />'.n;
-//	if($limit) $inputs .= '<input type="hidden" data-etc="search" name="etc_limit" value="'.$limit.'" />'.n;
-	if($match) $inputs .= '<input type="hidden" data-etc="search" name="m" value="'.$match.'" />'.n;
-	foreach($qs as $key => $val) $inputs .= '<input type="hidden" data-etc="search" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($val).'" />'.n;
-	$inputs .= $thing ? parse($thing) : '<input type="search" name="q"'.($size ? ' size="'.intval($size).'"' : '').' value="'.$q.'" placeholder="'.$placeholder.'" autocomplete="off" />'.n;
+	if($hash) $inputs .= '<input type="hidden" data-etc="search" name="etc_search" value="'.$hash.'">'.n;
+	if($format) $inputs .= '<input type="hidden" data-etc="search" name="etc_q" value="'.htmlspecialchars($format).'">'.n;
+//	if($limit) $inputs .= '<input type="hidden" data-etc="search" name="etc_limit" value="'.$limit.'">'.n;
+	if($match) $inputs .= '<input type="hidden" data-etc="search" name="m" value="'.$match.'">'.n;
+	foreach($qs as $key => $val) $inputs .= '<input type="hidden" data-etc="search" name="'.htmlspecialchars($key).'" value="'.htmlspecialchars($val).'">'.n;
+	$inputs .= $thing ? parse($thing) : '<input type="search" name="q"'.($size ? ' size="'.intval($size).'"' : '').' value="'.$q.'" placeholder="'.$placeholder.'" autocomplete="off">'.n;
 
 	$out = '<form id="'.$html_id.'" class="'.$class.'" method="get" action="'.$action.'">'.n
-	.($label ? '<label>'.$label.'<br /></label>' : '').$inputs
+	.($label ? '<label>'.$label.'</label><br>' : '').$inputs
 	.'</form>';
 
 	if($live) {
@@ -630,4 +738,12 @@ function etc_search($atts, $thing = '')
 		.'});'.n.'//]]></script>';
 	}
 	return $out;
+}
+
+
+function etc_search_pophelp($event, $step, $ui, $atts)
+{
+	$atts['data-item'] = gTxt('pophelp_' . $atts['help_var']);
+
+	return sp.href(span(gTxt('help'), array('class' => 'ui-icon ui-icon-help')), '#', $atts);
 }
